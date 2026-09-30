@@ -45,6 +45,18 @@ def index():
     )
 
 
+@app.route("/about")
+def about():
+    """Menampilkan halaman informasi aplikasi."""
+    return "Aplikasi Login Aman - DevSecOps Pipeline"
+
+
+@app.route("/health")
+def health():
+    """Menampilkan status aplikasi."""
+    return "OK"
+
+
 if __name__ == "__main__":
     init_db()
     app.run(host="0.0.0.0", port=5000)  # nosemgrep
