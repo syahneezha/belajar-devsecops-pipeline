@@ -54,6 +54,7 @@ jobs:
     deploy-to-vm:
         name: Build & Deploy to VirtualBox VM
         needs: [sast-scan, pylint-check]
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         runs-on: self-hosted
         steps:
             - name: Checkout Source Code
