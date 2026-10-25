@@ -1,0 +1,26 @@
+# Git dan CI
+.git
+.github
+.gitignore
+
+# Test dan file dev
+tests/
+pytest.ini
+requirements-dev.txt
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Cache Python
+**/__pycache__
+**/*.pyc
+
+# Data dan rahasia lokal
+users.db
+.env
+
+# Dokumen dan file Docker
+README.md
+deploy/
+Dockerfile
+.dockerignore

@@ -124,6 +124,39 @@ jobs:
               run: pytest --cov=app --cov-report=term-missing --cov-fail-under=80
 
     # ==========================================
+    # CI JOB 6: Dockerfile Lint (Hadolint)
+    # ==========================================
+    hadolint-lint:
+        name: Hadolint Dockerfile Lint
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v4
+
+            - name: Run Hadolint
+              run: |
+                  docker run --rm -i hadolint/hadolint:v2.12.0 \
+                      hadolint --failure-threshold warning - < Dockerfile
+
+    # ==========================================
+    # CI JOB 7: Docker Misconfiguration (Trivy Config)
+    # ==========================================
+    trivy-config-scan:
+        name: Trivy Config Scan
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v4
+
+            - name: Run Trivy Config Scan
+              # Dijalankan lewat image yang dipin (v0.69.3), bukan trivy-action,
+              # karena tag trivy-action sempat disusupi pada Maret 2026
+              run: |
+                  docker run --rm -v "$PWD:/work:ro" -w /work \
+                      aquasec/trivy:0.69.3 config \
+                      --severity HIGH,CRITICAL --exit-code 1 .
+
+    # ==========================================
     # CD STAGE: Deploy ke VM
     # ==========================================
     deploy-to-vm:
