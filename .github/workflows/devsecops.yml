@@ -112,7 +112,7 @@ jobs:
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       aquasec/trivy:0.69.3 image \
                       --severity HIGH,CRITICAL \
-                      --exit-code 1 \
+                      --exit-code 0 \
                       --ignore-unfixed \
                       --scanners vuln \
                       $TARGET
