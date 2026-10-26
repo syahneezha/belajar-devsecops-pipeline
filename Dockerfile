@@ -7,8 +7,8 @@ RUN useradd -m appuser
 
 COPY requirements.txt .
 
-# Update pip dan setuptools untuk menambal kerentanan bawaan (vendor)
-RUN pip install --no-cache-dir --upgrade pip setuptools
+# PAKSA upgrade paket-paket sistem bawaan image yang rentan (Bypass Cache)
+RUN pip install --no-cache-dir --upgrade pip setuptools==78.1.1 wheel==0.46.2 jaraco.context==6.1.0 msgpack==1.2.1 urllib3==2.8.0
 
 RUN pip install --no-cache-dir -r requirements.txt
 
