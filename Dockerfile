@@ -7,6 +7,9 @@ RUN useradd -m appuser
 
 COPY requirements.txt .
 
+# Update pip dan setuptools untuk menambal kerentanan bawaan (vendor)
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
