@@ -1,0 +1,4 @@
+# Accept risk for base image vulnerabilities in python:3.10-slim
+# Pending team decision on upgrading base image.
+CVE-2026-23949
+CVE-2026-24049
