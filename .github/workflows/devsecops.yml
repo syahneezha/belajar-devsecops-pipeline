@@ -2,7 +2,7 @@ name: DevSecOps CI/CD Pipeline
 
 on:
     push:
-        branches: ["main", "master"]
+        branches: ["main", "master", "tahap-*"]
     pull_request:
         branches: ["main", "master"]
     workflow_dispatch: {}
@@ -197,7 +197,7 @@ jobs:
                   provenance: ${{ github.event_name == 'push' && 'mode=max' || false }}
                   sbom: false
 
-            - - name: Run Trivy Image Scan (Pinned Version)
+            - name: Run Trivy Image Scan (Pinned Version)
               env:
                   TRIVY_USERNAME: ${{ github.actor }}
                   TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
