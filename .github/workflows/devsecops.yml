@@ -197,7 +197,7 @@ jobs:
                   provenance: ${{ github.event_name == 'push' && 'mode=max' || false }}
                   sbom: false
 
-            - name: Run Trivy Image Scan (Pinned Version)
+            - - name: Run Trivy Image Scan (Pinned Version)
               env:
                   TRIVY_USERNAME: ${{ github.actor }}
                   TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -212,6 +212,7 @@ jobs:
                       -e TRIVY_USERNAME \
                       -e TRIVY_PASSWORD \
                       -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v "$PWD:/workspace" -w /workspace \
                       aquasec/trivy:0.69.3 image \
                       --severity HIGH,CRITICAL \
                       --exit-code 1 \
