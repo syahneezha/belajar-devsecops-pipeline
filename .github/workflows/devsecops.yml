@@ -194,7 +194,7 @@ jobs:
                   push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
                   load: ${{ github.ref != 'refs/heads/main' || github.event_name != 'push' }}
                   tags: ${{ steps.prep.outputs.image }}:sha-${{ github.sha }}
-                  provenance: ${{ github.event_name == 'push' && 'mode=max' || false }}
+                  provenance: ${{ (github.ref == 'refs/heads/main' && github.event_name == 'push') && 'mode=max' || 'false' }}                  
                   sbom: false
 
             - name: Run Trivy Image Scan (Pinned Version)
