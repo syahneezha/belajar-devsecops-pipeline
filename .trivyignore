@@ -1,0 +1,4 @@
+# Daftar pengecualian temuan Trivy, hanya untuk risiko yang sudah diterima tim.
+# Format: satu ID CVE per baris, dengan alasan di komentar dan tanggal kedaluwarsa.
+# Contoh (jangan diaktifkan tanpa alasan):
+# CVE-XXXX-XXXXX exp:2026-12-31
