@@ -384,6 +384,7 @@ jobs:
                 echo "Verifikasi tanda tangan Cosign via OIDC..."
                 cosign verify \
                   --certificate-identity-regexp "https://github.com/${{ github.repository_owner }}/.*" \
+                  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
                   "$IMAGE_REF"
 
             - name: Pull Image from GHCR (Public)
