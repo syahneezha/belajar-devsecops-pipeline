@@ -1,8 +1,49 @@
 """Modul backend autentikasi Flask dengan antarmuka web interaktif."""
+import os
+import secrets
 import sqlite3
+
 from flask import Flask, render_template, request
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
+# Kunci penanda tangan sesi dan token CSRF. Diambil dari lingkungan; jika tidak
+# ada, dibuat acak saat start (token lama gugur saat aplikasi restart).
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+CSRFProtect(app)
+
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self'; "
+        "img-src 'self'; object-src 'none'; base-uri 'self'; "
+        "form-action 'self'; frame-ancestors 'none'"
+    ),
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "require-corp",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Cache-Control": "no-store",
+}
+
+
+class QuietRequestHandler(WSGIRequestHandler):
+    """Handler server dev yang tidak membocorkan versi Werkzeug dan Python."""
+
+    def version_string(self):
+        return "webserver"
+
+
+@app.after_request
+def set_security_headers(response):
+    """Memasang header keamanan pada setiap respons."""
+    for name, value in SECURITY_HEADERS.items():
+        response.headers[name] = value
+    return response
 
 
 def init_db():
@@ -59,4 +100,6 @@ def health():
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000)  # nosemgrep
+    app.run(  # nosemgrep
+        host="0.0.0.0", port=5000, request_handler=QuietRequestHandler
+    )

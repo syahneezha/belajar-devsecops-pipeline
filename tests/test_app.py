@@ -1,4 +1,5 @@
 """Unit test untuk aplikasi login Flask (app.py)."""
+import re
 import sqlite3
 
 import pytest
@@ -16,6 +17,20 @@ def client_fixture(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     app_module.init_db()
     app_module.app.config["TESTING"] = True
+    # CSRF dimatikan agar test fungsional fokus ke logika login;
+    # perlindungan CSRF diuji terpisah lewat fixture csrf_client.
+    monkeypatch.setitem(app_module.app.config, "WTF_CSRF_ENABLED", False)
+    with app_module.app.test_client() as test_client:
+        yield test_client
+
+
+@pytest.fixture(name="csrf_client")
+def csrf_client_fixture(tmp_path, monkeypatch):
+    """Client Flask dengan perlindungan CSRF aktif seperti di produksi."""
+    monkeypatch.chdir(tmp_path)
+    app_module.init_db()
+    app_module.app.config["TESTING"] = True
+    monkeypatch.setitem(app_module.app.config, "WTF_CSRF_ENABLED", True)
     with app_module.app.test_client() as test_client:
         yield test_client
 
@@ -87,3 +102,60 @@ def test_init_db_membuat_user_admin(tmp_path, monkeypatch):
     ).fetchone()
     conn.close()
     assert user is not None
+
+
+def test_post_tanpa_token_csrf_ditolak(csrf_client):
+    """POST / tanpa token CSRF harus ditolak dengan status 400."""
+    response = csrf_client.post(
+        "/", data={"username": "admin", "password": "supersecret"}
+    )
+    assert response.status_code == 400
+
+
+def test_login_dengan_token_csrf_valid(csrf_client):
+    """POST / dengan token CSRF dari form diterima dan login berhasil."""
+    page = csrf_client.get("/")
+    match = re.search(rb'name="csrf_token" value="([^"]+)"', page.data)
+    assert match is not None
+    response = csrf_client.post(
+        "/",
+        data={
+            "username": "admin",
+            "password": "supersecret",
+            "csrf_token": match.group(1).decode(),
+        },
+    )
+    assert response.status_code == 200
+    assert b"Login Berhasil" in response.data
+
+
+def test_header_keamanan_terpasang(client):
+    """Setiap respons membawa header keamanan dan tidak membocorkan versi."""
+    response = client.get("/")
+    for name in (
+        "Content-Security-Policy",
+        "X-Frame-Options",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+        "Cross-Origin-Opener-Policy",
+        "Cross-Origin-Embedder-Policy",
+        "Cross-Origin-Resource-Policy",
+    ):
+        assert name in response.headers
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+    assert "unsafe-inline" not in response.headers["Content-Security-Policy"]
+    assert "Werkzeug" not in response.headers.get("Server", "")
+
+
+def test_css_statis_tersedia(client):
+    """CSS dilayani dari file statis agar CSP tidak perlu unsafe-inline."""
+    response = client.get("/static/style.css")
+    assert response.status_code == 200
+    assert response.mimetype == "text/css"
+
+
+def test_handler_server_tidak_membocorkan_versi():
+    """Handler server dev hanya menyebut nama generik, tanpa versi."""
+    handler = app_module.QuietRequestHandler
+    assert handler.version_string(object()) == "webserver"
