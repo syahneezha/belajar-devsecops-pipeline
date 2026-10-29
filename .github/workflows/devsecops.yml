@@ -373,14 +373,14 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
 
-            - name: Verify Image Signature with Cosign
+          - name: Verify Image Signature with Cosign
               run: |
                 DIGEST="${{ needs.build-image-security.outputs.digest }}"
                 
                 if [ -n "$DIGEST" ] && [ "$DIGEST" != "null" ]; then
                   IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${DIGEST}"
                 else
-                  IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline:latest"
+                  IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline:sha-${{ github.sha }}"
                 fi
                 
                 echo "APP_IMAGE=$IMAGE_REF" >> $GITHUB_ENV
