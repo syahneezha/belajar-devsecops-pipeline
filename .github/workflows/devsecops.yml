@@ -244,7 +244,6 @@ jobs:
 
     # ==========================================
     # CI JOB 9: DAST Scan (OWASP ZAP Baseline) - Tahap 4
-    # Hanya push ke main, memindai image GHCR hasil Tahap 3 (by digest)
     # ==========================================
     zap-baseline-scan:
         name: OWASP ZAP Baseline Scan
@@ -287,8 +286,6 @@ jobs:
                   exit 1
 
             - name: Run ZAP Baseline Scan
-              # -I: warning tidak menggagalkan pipeline, hanya temuan level FAIL
-              # chmod 777: user "zap" di dalam image butuh izin tulis ke folder laporan
               run: |
                   mkdir -p zap-out
                   chmod 777 zap-out
@@ -365,7 +362,7 @@ jobs:
             cosign attest --yes --predicate sbom.cdx.json --type cyclonedx ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${IMAGE_DIGEST}                  
 
     # ==========================================
-    # CD STAGE: Deploy ke VM (Tahap 6 - Diperbarui)
+    # CD STAGE: Deploy ke VM (Tahap 6 - Diperbarui & Diamankan)
     # ==========================================
     deploy-to-vm:
         name: Deploy to Production VM
@@ -378,7 +375,14 @@ jobs:
 
             - name: Verify Image Signature with Cosign
               run: |
-                IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${{ needs.sign-and-attest.outputs.image_digest }}"
+                DIGEST="${{ needs.build-image-security.outputs.digest }}"
+                
+                if [ -n "$DIGEST" ] && [ "$DIGEST" != "null" ]; then
+                  IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${DIGEST}"
+                else
+                  IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline:latest"
+                fi
+                
                 echo "APP_IMAGE=$IMAGE_REF" >> $GITHUB_ENV
 
                 echo "Verifikasi tanda tangan Cosign via OIDC..."
