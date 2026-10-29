@@ -354,13 +354,13 @@ jobs:
             
         - name: Sign Image
           env:
-            IMAGE_DIGEST: ${{ needs.build-image-security.outputs.image_digest }}
+            IMAGE_DIGEST: ${{ needs.build-image-security.outputs.digest }}
           run: |
             cosign sign --yes ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${IMAGE_DIGEST}
             
         - name: Attest SBOM
           env:
-            IMAGE_DIGEST: ${{ needs.build-image-security.outputs.image_digest }}
+            IMAGE_DIGEST: ${{ needs.build-image-security.outputs.digest }}
           run: |
             cosign attest --yes --predicate sbom.cdx.json --type cyclonedx ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${IMAGE_DIGEST}                  
 
