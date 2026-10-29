@@ -365,21 +365,76 @@ jobs:
             cosign attest --yes --predicate sbom.cdx.json --type cyclonedx ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${IMAGE_DIGEST}                  
 
     # ==========================================
-    # CD STAGE: Deploy ke VM
+    # CD STAGE: Deploy ke VM (Tahap 6 - Diperbarui)
     # ==========================================
     deploy-to-vm:
-        name: Build & Deploy to VirtualBox VM
-        needs: [sast-scan, pylint-check, build-image-security]
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        runs-on: self-hosted
+        name: Deploy to Production VM
+        needs: sign-and-attest
+        runs-on: [self-hosted, linux]
+        environment: production-vm
         steps:
-            - name: Checkout Source Code
+            - name: Checkout Code
               uses: actions/checkout@v4
 
-            - name: Build and Run Container
+            - name: Verify Image Signature with Cosign
               run: |
-                  docker build -t secure-flask-app:latest .
-                  docker stop web-flask || true
-                  docker rm web-flask || true
-                  docker run -d -p 5000:5000 --name web-flask secure-flask-app:latest
-                  docker ps | grep web-flask
+                IMAGE_REF="ghcr.io/${{ github.repository_owner }}/belajar-devsecops-pipeline@${{ needs.sign-and-attest.outputs.image_digest }}"
+                echo "APP_IMAGE=$IMAGE_REF" >> $GITHUB_ENV
+
+                echo "Verifikasi tanda tangan Cosign via OIDC..."
+                cosign verify \
+                  --certificate-identity-regexp "https://github.com/${{ github.repository_owner }}/.*" \
+                  --certificate-issuer "https://token.actions.githubusercontent.com" \
+                  "$IMAGE_REF"
+
+            - name: Pull Image from GHCR (Public)
+              run: |
+                docker pull "${{ env.APP_IMAGE }}"
+
+            - name: Backup Current Image ID (For Rollback)
+              id: backup
+              run: |
+                cd deploy
+                PREV_IMG=$(docker compose images -q web-flask 2>/dev/null || echo "")
+                echo "PREVIOUS_IMAGE=$PREV_IMG" >> $GITHUB_ENV
+
+            - name: Deploy and Run Health Check / Smoke Test
+              id: deploy
+              run: |
+                cd deploy
+                export APP_IMAGE="${{ env.APP_IMAGE }}"
+                
+                docker compose down --remove-orphans
+                docker compose up -d
+
+                echo "Menunggu container stabil & verifikasi health check ke port 5000..."
+                HEALTH_PASSED=false
+                for i in {1..12}; do
+                  if curl -sSf http://localhost:5000/health > /dev/null 2>&1; then
+                    HEALTH_PASSED=true
+                    break
+                  fi
+                  sleep 3
+                done
+
+                if [ "$HEALTH_PASSED" = "false" ]; then
+                  echo "Health check gagal!"
+                  exit 1
+                fi
+
+                echo "Menjalankan Smoke Test..."
+                curl -sSf http://localhost:5000/ > /dev/null 2>&1
+
+            - name: Automatic Rollback on Failure
+              if: failure() && steps.deploy.conclusion == 'failure'
+              run: |
+                echo "Deployment/Health check gagal. Melakukan rollback otomatis..."
+                cd deploy
+                if [ -n "${{ env.PREVIOUS_IMAGE }}" ]; then
+                  export APP_IMAGE="${{ env.PREVIOUS_IMAGE }}"
+                  docker compose down
+                  docker compose up -d
+                  echo "Rollback ke versi image sebelumnya selesai."
+                else
+                  echo "Tidak ada image lama untuk dikembalikan."
+                fi
