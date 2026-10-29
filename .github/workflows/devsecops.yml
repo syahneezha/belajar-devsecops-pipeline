@@ -243,6 +243,79 @@ jobs:
                   path: sbom.cdx.json
 
     # ==========================================
+    # CI JOB 9: DAST Scan (OWASP ZAP Baseline) - Tahap 4
+    # Hanya push ke main, memindai image GHCR hasil Tahap 3 (by digest)
+    # ==========================================
+    zap-baseline-scan:
+        name: OWASP ZAP Baseline Scan
+        needs: [build-image-security]
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: read
+        env:
+            APP_IMAGE: ${{ needs.build-image-security.outputs.image }}@${{ needs.build-image-security.outputs.digest }}
+            ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0
+        steps:
+            - name: Log in to GHCR
+              uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create Docker Network
+              run: docker network create zapnet
+
+            - name: Run App Container from GHCR Image
+              run: |
+                  docker pull "$APP_IMAGE"
+                  docker run -d --name web-flask --network zapnet "$APP_IMAGE"
+
+            - name: Wait Until App Is Healthy
+              run: |
+                  for i in $(seq 1 15); do
+                      if docker exec web-flask python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"; then
+                          echo "Aplikasi sehat"
+                          exit 0
+                      fi
+                      echo "Menunggu aplikasi ($i/15)..."
+                      sleep 2
+                  done
+                  docker logs web-flask
+                  exit 1
+
+            - name: Run ZAP Baseline Scan
+              # -I: warning tidak menggagalkan pipeline, hanya temuan level FAIL
+              # chmod 777: user "zap" di dalam image butuh izin tulis ke folder laporan
+              run: |
+                  mkdir -p zap-out
+                  chmod 777 zap-out
+                  docker run --rm --network zapnet \
+                      -v "$PWD/zap-out:/zap/wrk:rw" \
+                      "$ZAP_IMAGE" \
+                      zap-baseline.py -t http://web-flask:5000 -r zap-report.html -I
+
+            - name: Upload ZAP Report
+              if: always()
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: zap-report
+                  path: zap-out/zap-report.html
+                  if-no-files-found: warn
+
+            - name: Show App Logs on Failure
+              if: failure()
+              run: docker logs web-flask || true
+
+            - name: Cleanup
+              if: always()
+              run: |
+                  docker rm -f web-flask || true
+                  docker network rm zapnet || true
+
+    # ==========================================
     # CD STAGE: Deploy ke VM
     # ==========================================
     deploy-to-vm:
