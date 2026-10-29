@@ -338,7 +338,7 @@ jobs:
         id-token: write
       steps:
         - name: Install Cosign
-          uses: sigstore/cosign-installer@dc72c7d5f4d10eb6150618ce62f6812260882855 # v3.5.0
+          uses: sigstore/cosign-installer@v3.5.0
         
         - name: Login to GitHub Container Registry
           uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
