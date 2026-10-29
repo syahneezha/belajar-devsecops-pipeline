@@ -407,8 +407,8 @@ jobs:
                 cd deploy
                 export APP_IMAGE="${{ env.APP_IMAGE }}"
                 
-                docker compose down --remove-orphans
-                docker compose up -d
+                docker-compose down
+                docker-compose up -d
 
                 echo "Menunggu container stabil & verifikasi health check ke port 5000..."
                 HEALTH_PASSED=false
@@ -435,8 +435,8 @@ jobs:
                 cd deploy
                 if [ -n "${{ env.PREVIOUS_IMAGE }}" ]; then
                   export APP_IMAGE="${{ env.PREVIOUS_IMAGE }}"
-                  docker compose down
-                  docker compose up -d
+                  docker-compose down
+                  docker-compose up -d
                   echo "Rollback ke versi image sebelumnya selesai."
                 else
                   echo "Tidak ada image lama untuk dikembalikan."
