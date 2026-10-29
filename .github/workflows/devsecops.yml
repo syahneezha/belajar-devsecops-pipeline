@@ -398,7 +398,7 @@ jobs:
               id: backup
               run: |
                 cd deploy
-                PREV_IMG=$(docker compose images -q web-flask 2>/dev/null || echo "")
+                PREV_IMG=$(docker-compose images -q web-flask 2>/dev/null || echo "")
                 echo "PREVIOUS_IMAGE=$PREV_IMG" >> $GITHUB_ENV
 
             - name: Deploy and Run Health Check / Smoke Test
@@ -407,7 +407,7 @@ jobs:
                 cd deploy
                 export APP_IMAGE="${{ env.APP_IMAGE }}"
                 
-                docker-compose down 
+                docker-compose down
                 docker-compose up -d
 
                 echo "Menunggu container stabil & verifikasi health check ke port 5000..."
